@@ -72,9 +72,31 @@ func hostname(packet *Packet, payload *bytes.Buffer) (err error) {
 	return nil
 }
 
-func main() {
+func time(packet *Packet, payload *bytes.Buffer) (err error) {
+	var value int64
+	readErr := binary.Read(payload, binary.BigEndian, &value)
+	if readErr != nil {
+		return readErr
+	} else {
+		numericPart := NumericPart{PartHeaderFromBuffer(0x0001, payload), value}
+		packet.Time = numericPart
+		log.Printf("type = %d, length = %d, hostname = %s",
+			packet.Time.Header.PartType,
+			packet.Time.Header.PartLength,
+			packet.Time.Value)
+		return nil
+	}
+}
+
+func createMessageProcessors() (processors map[uint16]part) {
 	messageProcessors := make(map[uint16]part)
 	messageProcessors[0x0000] = hostname
+	messageProcessors[0x0001] = time
+	return messageProcessors
+}
+
+func main() {
+	messageProcessors := createMessageProcessors()
 
 	uaddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", 5555))
 	if err != nil {
@@ -101,8 +123,6 @@ func main() {
 			for payloadBuffer.Len() > 0 {
 				partHeader := new(PartHeader)
 				binary.Read(payloadBuffer, binary.BigEndian, partHeader)
-
-				fmt.Printf("payloadBuffer length %d next length %d", payloadBuffer.Len(), int(partHeader.PartLength)-4)
 				partBuffer := bytes.NewBuffer(payloadBuffer.Next(int(partHeader.PartLength) - 4))
 				processor, supports := messageProcessors[partHeader.PartType]
 				if supports {
@@ -111,9 +131,10 @@ func main() {
 						log.Fatal(err)
 					}
 				} else {
-					fmt.Printf("This program does not currently support part type: %d\n", partHeader.PartType)
+					fmt.Print(".")
 				}
 			}
+			fmt.Print("\n")
 		}(buffer)
 	}
 }
