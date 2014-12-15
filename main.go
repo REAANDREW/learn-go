@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 )
 
 const UDP_PACKET_SIZE uint = 65507
@@ -42,6 +43,7 @@ type Value struct {
 type Packet struct {
 	Host           StringPart
 	Time           NumericPart
+	TimeHigh       NumericPart
 	Plugin         StringPart
 	PluginInstance StringPart
 	Type           StringPart
@@ -72,7 +74,7 @@ func hostname(packet *Packet, payload *bytes.Buffer) (err error) {
 	return nil
 }
 
-func time(packet *Packet, payload *bytes.Buffer) (err error) {
+func lowtime(packet *Packet, payload *bytes.Buffer) (err error) {
 	var value int64
 	readErr := binary.Read(payload, binary.BigEndian, &value)
 	if readErr != nil {
@@ -88,10 +90,27 @@ func time(packet *Packet, payload *bytes.Buffer) (err error) {
 	}
 }
 
+func hightime(packet *Packet, payload *bytes.Buffer) (err error) {
+	var value int64
+	readErr := binary.Read(payload, binary.BigEndian, &value)
+	if readErr != nil {
+		return readErr
+	} else {
+		numericPart := NumericPart{PartHeaderFromBuffer(0x0008, payload), value}
+		packet.TimeHigh = numericPart
+		log.Printf("type = %d, length = %d, datevalue = %s",
+			packet.TimeHigh.Header.PartType,
+			packet.TimeHigh.Header.PartLength,
+			time.Unix(packet.TimeHigh.Value>>30, 0))
+		return nil
+	}
+}
+
 func createMessageProcessors() (processors map[uint16]part) {
 	messageProcessors := make(map[uint16]part)
 	messageProcessors[0x0000] = hostname
-	messageProcessors[0x0001] = time
+	messageProcessors[0x0001] = lowtime
+	messageProcessors[0x0008] = hightime
 	return messageProcessors
 }
 
