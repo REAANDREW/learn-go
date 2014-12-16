@@ -34,10 +34,10 @@ type ValuePart struct {
 
 type Value struct {
 	DataType      byte
-	CounterValue  uint64
+	CounterValue  uint32
 	GaugeValue    float64
-	DeriveValue   int64
-	AbsoluteValue int64
+	DeriveValue   int32
+	AbsoluteValue int32
 }
 
 type Packet struct {
@@ -163,6 +163,71 @@ func interval(packet *Packet, payload *bytes.Buffer) (err error) {
 	}
 }
 
+func values(packet *Packet, payload *bytes.Buffer) (err error) {
+	header := PartHeaderFromBuffer(0x0006, payload)
+	var numberOfValues uint16
+	readErr := binary.Read(payload, binary.BigEndian, &numberOfValues)
+	if readErr != nil {
+		return readErr
+	}
+
+	values := make([]Value, numberOfValues)
+	counter := uint16(0)
+	for counter < numberOfValues {
+		var dataType uint8
+		readErr := binary.Read(payload, binary.BigEndian, &dataType)
+		if readErr != nil {
+			fmt.Println("Boom 1")
+			return readErr
+		}
+
+		switch dataType {
+		case 0:
+			var value uint32
+			readErr := binary.Read(payload, binary.BigEndian, &value)
+			if readErr != nil {
+				fmt.Println("Boom 2")
+				return readErr
+			}
+			values[counter] = Value{DataType: dataType, CounterValue: value}
+		case 1:
+			var value float64
+			readErr := binary.Read(payload, binary.LittleEndian, &value)
+			if readErr != nil {
+				fmt.Println("Boom 3")
+				return readErr
+			}
+			values[counter] = Value{DataType: dataType, GaugeValue: value}
+		case 2:
+			var value int32
+			readErr := binary.Read(payload, binary.BigEndian, &value)
+			if readErr != nil {
+				fmt.Println("Boom 4")
+				return readErr
+			}
+			values[counter] = Value{DataType: dataType, DeriveValue: value}
+		case 3:
+			var value int32
+			readErr := binary.Read(payload, binary.BigEndian, &value)
+			if readErr != nil {
+				fmt.Println("Boom 5")
+				return readErr
+			}
+			values[counter] = Value{DataType: dataType, AbsoluteValue: value}
+		default:
+			return fmt.Errorf("unknown value type")
+		}
+		counter += 1
+	}
+
+	log.Printf("type = %d, length = %d, number of numberOfVaues = %d, values = %v",
+		header.PartType,
+		header.PartLength,
+		numberOfValues, values)
+
+	return nil
+}
+
 func createMessageProcessors() (processors map[uint16]part) {
 
 	//Need to look at returning a touple here being the id the func is designed to work with
@@ -176,6 +241,7 @@ func createMessageProcessors() (processors map[uint16]part) {
 	messageProcessors[0x0003] = pluginInstance
 	messageProcessors[0x0004] = processType
 	messageProcessors[0x0005] = processTypeInstance
+	messageProcessors[0x0006] = values
 	return messageProcessors
 }
 
