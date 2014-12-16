@@ -50,6 +50,7 @@ type Packet struct {
 	TypeInstance   StringPart
 	Values         ValuePart
 	Interval       NumericPart
+	IntervalValue  NumericPart
 	Message        StringPart
 	Severity       NumericPart
 }
@@ -106,11 +107,75 @@ func hightime(packet *Packet, payload *bytes.Buffer) (err error) {
 	}
 }
 
+func plugin(packet *Packet, payload *bytes.Buffer) (err error) {
+	stringPart := StringPart{PartHeaderFromBuffer(0x0002, payload), payload.String()}
+	packet.Plugin = stringPart
+	log.Printf("type = %d, length = %d, plugin-name = %s",
+		packet.Plugin.Header.PartType,
+		packet.Plugin.Header.PartLength,
+		packet.Plugin.Value)
+	return nil
+}
+
+func pluginInstance(packet *Packet, payload *bytes.Buffer) (err error) {
+	stringPart := StringPart{PartHeaderFromBuffer(0x0003, payload), payload.String()}
+	packet.PluginInstance = stringPart
+	log.Printf("type = %d, length = %d, plugin-instance = %s",
+		packet.PluginInstance.Header.PartType,
+		packet.PluginInstance.Header.PartLength,
+		packet.PluginInstance.Value)
+	return nil
+}
+
+func processType(packet *Packet, payload *bytes.Buffer) (err error) {
+	stringPart := StringPart{PartHeaderFromBuffer(0x0004, payload), payload.String()}
+	packet.Type = stringPart
+	log.Printf("type = %d, length = %d, type = %s",
+		packet.Type.Header.PartType,
+		packet.Type.Header.PartLength,
+		packet.Type.Value)
+	return nil
+}
+
+func processTypeInstance(packet *Packet, payload *bytes.Buffer) (err error) {
+	stringPart := StringPart{PartHeaderFromBuffer(0x0005, payload), payload.String()}
+	packet.TypeInstance = stringPart
+	log.Printf("type = %d, length = %d, type-instance = %s",
+		packet.TypeInstance.Header.PartType,
+		packet.TypeInstance.Header.PartLength,
+		packet.TypeInstance.Value)
+	return nil
+}
+
+func interval(packet *Packet, payload *bytes.Buffer) (err error) {
+	var value int64
+	readErr := binary.Read(payload, binary.BigEndian, &value)
+	if readErr != nil {
+		return readErr
+	} else {
+		numericPart := NumericPart{PartHeaderFromBuffer(0x0008, payload), value}
+		packet.Interval = numericPart
+		log.Printf("type = %d, length = %d, datevalue = %s",
+			packet.Interval.Header.PartType,
+			packet.Interval.Header.PartLength,
+			time.Unix(packet.Interval.Value, 0))
+		return nil
+	}
+}
+
 func createMessageProcessors() (processors map[uint16]part) {
+
+	//Need to look at returning a touple here being the id the func is designed to work with
+	//and the actual func itself.  This could then be simplified into an array
+
 	messageProcessors := make(map[uint16]part)
 	messageProcessors[0x0000] = hostname
 	messageProcessors[0x0001] = lowtime
 	messageProcessors[0x0008] = hightime
+	messageProcessors[0x0002] = plugin
+	messageProcessors[0x0003] = pluginInstance
+	messageProcessors[0x0004] = processType
+	messageProcessors[0x0005] = processTypeInstance
 	return messageProcessors
 }
 
