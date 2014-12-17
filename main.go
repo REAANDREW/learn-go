@@ -11,8 +11,11 @@ import (
 func createMessageProcessors() (processors map[uint16]parser) {
 	//Need to look at returning a touple here being the id the func is designed to work with
 	//and the actual func itself.  This could then be simplified into an array
+
+	hostName, hostNameCode := parseHostname()
+
 	messageProcessors := make(map[uint16]parser)
-	messageProcessors[0x0000] = parseHostname
+	messageProcessors[hostNameCode] = hostName
 	messageProcessors[0x0001] = parseTime
 	messageProcessors[0x0008] = parseHighTime
 	messageProcessors[0x0002] = parsePlugin

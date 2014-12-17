@@ -16,10 +16,13 @@ func partHeaderFromBuffer(partType uint16, payload *bytes.Buffer) PartHeader {
 	return PartHeader{partType, plength(uint16(payload.Len()))}
 }
 
-func parseHostname(packet *Packet, payload *bytes.Buffer) (err error) {
-	stringPart := StringPart{partHeaderFromBuffer(0x0000, payload), payload.String()}
-	packet.Host = stringPart
-	return nil
+func parseHostname() (parser parser, typeCode uint16) {
+	code := uint16(0x0000)
+	return func(packet *Packet, payload *bytes.Buffer) (err error) {
+		stringPart := StringPart{partHeaderFromBuffer(code, payload), payload.String()}
+		packet.Host = stringPart
+		return nil
+	}, code
 }
 
 func parseTime(packet *Packet, payload *bytes.Buffer) (err error) {
