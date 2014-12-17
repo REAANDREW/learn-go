@@ -6,242 +6,22 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 )
 
-const UDP_PACKET_SIZE uint = 65507
-
-type PartHeader struct {
-	PartType   uint16
-	PartLength uint16
-}
-
-type StringPart struct {
-	Header PartHeader
-	Value  string
-}
-
-type NumericPart struct {
-	Header PartHeader
-	Value  int64
-}
-
-type ValuePart struct {
-	Header         PartHeader
-	NumberOfValues uint16
-	Values         []Value
-}
-
-type Value struct {
-	DataType      byte
-	CounterValue  uint32
-	GaugeValue    float64
-	DeriveValue   int32
-	AbsoluteValue int32
-}
-
-type Packet struct {
-	Host           StringPart
-	Time           NumericPart
-	TimeHigh       NumericPart
-	Plugin         StringPart
-	PluginInstance StringPart
-	Type           StringPart
-	TypeInstance   StringPart
-	Values         ValuePart
-	Interval       NumericPart
-	IntervalValue  NumericPart
-	Message        StringPart
-	Severity       NumericPart
-}
-
-type part func(packet *Packet, payload *bytes.Buffer) (err error)
-
-func plength(length uint16) uint16 {
-	return length + 4
-}
-
-func PartHeaderFromBuffer(partType uint16, payload *bytes.Buffer) PartHeader {
-	return PartHeader{partType, plength(uint16(payload.Len()))}
-}
-
-func hostname(packet *Packet, payload *bytes.Buffer) (err error) {
-	stringPart := StringPart{PartHeaderFromBuffer(0x0000, payload), payload.String()}
-	packet.Host = stringPart
-	log.Printf("type = %d, length = %d, hostname = %s",
-		packet.Host.Header.PartType,
-		packet.Host.Header.PartLength,
-		packet.Host.Value)
-	return nil
-}
-
-func lowtime(packet *Packet, payload *bytes.Buffer) (err error) {
-	var value int64
-	readErr := binary.Read(payload, binary.BigEndian, &value)
-	if readErr != nil {
-		return readErr
-	} else {
-		numericPart := NumericPart{PartHeaderFromBuffer(0x0001, payload), value}
-		packet.Time = numericPart
-		log.Printf("type = %d, length = %d, hostname = %s",
-			packet.Time.Header.PartType,
-			packet.Time.Header.PartLength,
-			packet.Time.Value)
-		return nil
-	}
-}
-
-func hightime(packet *Packet, payload *bytes.Buffer) (err error) {
-	var value int64
-	readErr := binary.Read(payload, binary.BigEndian, &value)
-	if readErr != nil {
-		return readErr
-	} else {
-		numericPart := NumericPart{PartHeaderFromBuffer(0x0008, payload), value}
-		packet.TimeHigh = numericPart
-		log.Printf("type = %d, length = %d, datevalue = %s",
-			packet.TimeHigh.Header.PartType,
-			packet.TimeHigh.Header.PartLength,
-			time.Unix(packet.TimeHigh.Value>>30, 0))
-		return nil
-	}
-}
-
-func plugin(packet *Packet, payload *bytes.Buffer) (err error) {
-	stringPart := StringPart{PartHeaderFromBuffer(0x0002, payload), payload.String()}
-	packet.Plugin = stringPart
-	log.Printf("type = %d, length = %d, plugin-name = %s",
-		packet.Plugin.Header.PartType,
-		packet.Plugin.Header.PartLength,
-		packet.Plugin.Value)
-	return nil
-}
-
-func pluginInstance(packet *Packet, payload *bytes.Buffer) (err error) {
-	stringPart := StringPart{PartHeaderFromBuffer(0x0003, payload), payload.String()}
-	packet.PluginInstance = stringPart
-	log.Printf("type = %d, length = %d, plugin-instance = %s",
-		packet.PluginInstance.Header.PartType,
-		packet.PluginInstance.Header.PartLength,
-		packet.PluginInstance.Value)
-	return nil
-}
-
-func processType(packet *Packet, payload *bytes.Buffer) (err error) {
-	stringPart := StringPart{PartHeaderFromBuffer(0x0004, payload), payload.String()}
-	packet.Type = stringPart
-	log.Printf("type = %d, length = %d, type = %s",
-		packet.Type.Header.PartType,
-		packet.Type.Header.PartLength,
-		packet.Type.Value)
-	return nil
-}
-
-func processTypeInstance(packet *Packet, payload *bytes.Buffer) (err error) {
-	stringPart := StringPart{PartHeaderFromBuffer(0x0005, payload), payload.String()}
-	packet.TypeInstance = stringPart
-	log.Printf("type = %d, length = %d, type-instance = %s",
-		packet.TypeInstance.Header.PartType,
-		packet.TypeInstance.Header.PartLength,
-		packet.TypeInstance.Value)
-	return nil
-}
-
-func interval(packet *Packet, payload *bytes.Buffer) (err error) {
-	var value int64
-	readErr := binary.Read(payload, binary.BigEndian, &value)
-	if readErr != nil {
-		return readErr
-	} else {
-		numericPart := NumericPart{PartHeaderFromBuffer(0x0008, payload), value}
-		packet.Interval = numericPart
-		log.Printf("type = %d, length = %d, datevalue = %s",
-			packet.Interval.Header.PartType,
-			packet.Interval.Header.PartLength,
-			time.Unix(packet.Interval.Value, 0))
-		return nil
-	}
-}
-
-func values(packet *Packet, payload *bytes.Buffer) (err error) {
-	header := PartHeaderFromBuffer(0x0006, payload)
-	var numberOfValues uint16
-	readErr := binary.Read(payload, binary.BigEndian, &numberOfValues)
-	if readErr != nil {
-		return readErr
-	}
-
-	values := make([]Value, numberOfValues)
-	counter := uint16(0)
-	for counter < numberOfValues {
-		var dataType uint8
-		readErr := binary.Read(payload, binary.BigEndian, &dataType)
-		if readErr != nil {
-			fmt.Println("Boom 1")
-			return readErr
-		}
-
-		switch dataType {
-		case 0:
-			var value uint32
-			readErr := binary.Read(payload, binary.BigEndian, &value)
-			if readErr != nil {
-				fmt.Println("Boom 2")
-				return readErr
-			}
-			values[counter] = Value{DataType: dataType, CounterValue: value}
-		case 1:
-			var value float64
-			readErr := binary.Read(payload, binary.LittleEndian, &value)
-			if readErr != nil {
-				fmt.Println("Boom 3")
-				return readErr
-			}
-			values[counter] = Value{DataType: dataType, GaugeValue: value}
-		case 2:
-			var value int32
-			readErr := binary.Read(payload, binary.BigEndian, &value)
-			if readErr != nil {
-				fmt.Println("Boom 4")
-				return readErr
-			}
-			values[counter] = Value{DataType: dataType, DeriveValue: value}
-		case 3:
-			var value int32
-			readErr := binary.Read(payload, binary.BigEndian, &value)
-			if readErr != nil {
-				fmt.Println("Boom 5")
-				return readErr
-			}
-			values[counter] = Value{DataType: dataType, AbsoluteValue: value}
-		default:
-			return fmt.Errorf("unknown value type")
-		}
-		counter += 1
-	}
-
-	log.Printf("type = %d, length = %d, number of numberOfVaues = %d, values = %v",
-		header.PartType,
-		header.PartLength,
-		numberOfValues, values)
-
-	return nil
-}
-
-func createMessageProcessors() (processors map[uint16]part) {
-
+func createMessageProcessors() (processors map[uint16]parser) {
 	//Need to look at returning a touple here being the id the func is designed to work with
 	//and the actual func itself.  This could then be simplified into an array
-
-	messageProcessors := make(map[uint16]part)
-	messageProcessors[0x0000] = hostname
-	messageProcessors[0x0001] = lowtime
-	messageProcessors[0x0008] = hightime
-	messageProcessors[0x0002] = plugin
-	messageProcessors[0x0003] = pluginInstance
-	messageProcessors[0x0004] = processType
-	messageProcessors[0x0005] = processTypeInstance
-	messageProcessors[0x0006] = values
+	messageProcessors := make(map[uint16]parser)
+	messageProcessors[0x0000] = parseHostname
+	messageProcessors[0x0001] = parseTime
+	messageProcessors[0x0008] = parseHighTime
+	messageProcessors[0x0002] = parsePlugin
+	messageProcessors[0x0003] = parsePluginInstance
+	messageProcessors[0x0004] = parseProcessType
+	messageProcessors[0x0005] = parseProcessTypeInstance
+	messageProcessors[0x0006] = parseValues
+	messageProcessors[0x0007] = parseInterval
+	messageProcessors[0x0009] = parseHighInterval
 	return messageProcessors
 }
 
@@ -258,18 +38,17 @@ func main() {
 	}
 	defer conn.Close()
 
-	packet := new(Packet)
-	packetBytes := make([]byte, UDP_PACKET_SIZE)
-
 	for {
+		packetBytes := make([]byte, UDP_PACKET_SIZE)
 		numOfBytesReceived, _, err := conn.ReadFromUDP(packetBytes)
 		packetBytes = packetBytes[0:numOfBytesReceived]
-
 		if err != nil {
 			log.Fatal(err)
 		}
 		buffer := bytes.NewBuffer(packetBytes)
+
 		go func(payloadBuffer *bytes.Buffer) {
+			packet := new(Packet)
 			for payloadBuffer.Len() > 0 {
 				partHeader := new(PartHeader)
 				binary.Read(payloadBuffer, binary.BigEndian, partHeader)
@@ -281,9 +60,10 @@ func main() {
 						log.Fatal(err)
 					}
 				} else {
-					fmt.Print(".")
+					fmt.Printf("%5.d", partHeader.PartType)
 				}
 			}
+			fmt.Printf("Got a packet ")
 			fmt.Print("\n")
 		}(buffer)
 	}
