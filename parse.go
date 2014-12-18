@@ -4,9 +4,48 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 )
 
-type parserGen func() (parser parser, typeCode uint16)
+var messageProcessors map[uint16]parser
+
+func init() {
+	messageProcessors = createMessageProcessors()
+}
+
+func Parse(payloadBuffer *bytes.Buffer) (parsedPacket Packet) {
+	var packet Packet
+
+	for payloadBuffer.Len() > 0 {
+		partHeader := new(PartHeader)
+		binary.Read(payloadBuffer, binary.BigEndian, partHeader)
+		partBuffer := bytes.NewBuffer(payloadBuffer.Next(int(partHeader.PartLength) - 4))
+		processor, supports := messageProcessors[partHeader.PartType]
+		if supports {
+			err := processor(&packet, partBuffer)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			fmt.Printf("%5.d", partHeader.PartType)
+		}
+	}
+	return packet
+}
+
+func createMessageProcessors() (processors map[uint16]parser) {
+	messageProcessors := make(map[uint16]parser)
+	val := []parserGenerator{parseHostname, parseTime, parseHighTime, parsePlugin, parsePluginInstance, parseProcessType, parseProcessTypeInstance, parseInterval, parseValues, parseHighInterval}
+
+	for _, parserGenFunc := range val {
+		parserFunc, typeCode := parserGenFunc()
+		messageProcessors[typeCode] = parserFunc
+	}
+
+	return messageProcessors
+}
+
+type parserGenerator func() (parser parser, typeCode uint16)
 type parser func(packet *Packet, payload *bytes.Buffer) (err error)
 
 func plength(length uint16) uint16 {
