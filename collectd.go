@@ -1,7 +1,5 @@
 package main
 
-const UDP_PACKET_SIZE uint = 65507
-
 type PartHeader struct {
 	PartType   uint16
 	PartLength uint16

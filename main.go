@@ -7,16 +7,20 @@ import (
 	"net"
 )
 
+const UDP_PACKET_SIZE uint = 65507
+
 func main() {
 
 	uaddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", 5555))
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	conn, err := net.ListenUDP("udp", uaddr)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer conn.Close()
 
 	for {
@@ -30,8 +34,7 @@ func main() {
 
 		go func(payloadBuffer *bytes.Buffer) {
 			packet := Parse(payloadBuffer)
-			fmt.Printf("Got a packet %v", packet)
-			fmt.Print("\n")
+			fmt.Printf("Got a packet %v\n", packet)
 		}(buffer)
 	}
 }

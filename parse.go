@@ -9,6 +9,9 @@ import (
 
 var messageProcessors map[uint16]parser
 
+type parserGenerator func() (parser parser, typeCode uint16)
+type parser func(packet *Packet, payload *bytes.Buffer) (err error)
+
 func init() {
 	messageProcessors = createMessageProcessors()
 }
@@ -44,9 +47,6 @@ func createMessageProcessors() (processors map[uint16]parser) {
 
 	return messageProcessors
 }
-
-type parserGenerator func() (parser parser, typeCode uint16)
-type parser func(packet *Packet, payload *bytes.Buffer) (err error)
 
 func plength(length uint16) uint16 {
 	return length + 4
