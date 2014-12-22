@@ -27,6 +27,7 @@ func Parse(payloadBuffer *bytes.Buffer) (parsedPacket Packet, err error) {
 		if supports {
 			err := processor(&packet, partBuffer)
 			if err != nil {
+				fmt.Errorf("error processing %b", err)
 				return Packet{}, err
 			}
 		} else {
@@ -133,7 +134,7 @@ func parseProcessTypeInstance() (parser parser, typeCode uint16) {
 }
 
 func parseInterval() (parser parser, typeCode uint16) {
-	code := uint16(0x0008)
+	code := uint16(0x0007)
 	return func(packet *Packet, payload *bytes.Buffer) (err error) {
 		var value int64
 		readErr := binary.Read(payload, binary.BigEndian, &value)
