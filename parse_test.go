@@ -9,22 +9,36 @@ import (
 	"time"
 )
 
+type PacketStringSelector func(packet Packet) string
+type StringAssert func(value string, typeId uint16, selector PacketStringSelector)
+
+func assertOnStringPart(t *testing.T) StringAssert {
+
+	return func(value string, typeId uint16, selector PacketStringSelector) {
+
+		buf := new(bytes.Buffer)
+		stringValue := value
+		partType := typeId
+		partLength := uint16(len(stringValue))
+
+		binary.Write(buf, binary.BigEndian, partType)
+		binary.Write(buf, binary.BigEndian, partLength)
+		buf.WriteString(stringValue)
+
+		packet, err := Parse(buf)
+		if err != nil {
+			log.Fatalf("err encountered %v", err)
+		}
+		assert.Equal(t, selector(packet), stringValue, "the string part value does not match the expected")
+	}
+
+}
+
 func Test_ParsesTheHostname(t *testing.T) {
 
-	buf := new(bytes.Buffer)
-	hostname := "talula"
-	partType := uint16(0x0000)
-	partLength := uint16(len(hostname))
-
-	binary.Write(buf, binary.BigEndian, partType)
-	binary.Write(buf, binary.BigEndian, partLength)
-	buf.WriteString(hostname)
-
-	packet, err := Parse(buf)
-	if err != nil {
-		log.Fatalf("err encountered %v", err)
-	}
-	assert.Equal(t, packet.Host.Value, hostname, "the hostname does not match the expected")
+	assertOnStringPart(t)("the hostname", 0x0000, func(packet Packet) string {
+		return packet.Host.Value
+	})
 
 }
 
@@ -68,38 +82,24 @@ func Test_ParseTheHighDefintiionTime(t *testing.T) {
 
 func Test_ParsesThePlugin(t *testing.T) {
 
-	buf := new(bytes.Buffer)
-	plugin := "zeePlugin"
-	partType := uint16(0x0002)
-	partLength := uint16(len(plugin))
-
-	binary.Write(buf, binary.BigEndian, partType)
-	binary.Write(buf, binary.BigEndian, partLength)
-	buf.WriteString(plugin)
-
-	packet, err := Parse(buf)
-	if err != nil {
-		log.Fatalf("err encountered %v", err)
-	}
-	assert.Equal(t, packet.Plugin.Value, plugin, "the plugin does not match the expected")
+	assertOnStringPart(t)("the plugin", 0x0002, func(packet Packet) string {
+		return packet.Plugin.Value
+	})
 
 }
 
 func Test_ParsesThePluginInstance(t *testing.T) {
 
-	buf := new(bytes.Buffer)
-	pluginInstance := "zeePluginInstance"
-	partType := uint16(0x0003)
-	partLength := uint16(len(pluginInstance))
+	assertOnStringPart(t)("the plugin instance", 0x0003, func(packet Packet) string {
+		return packet.PluginInstance.Value
+	})
 
-	binary.Write(buf, binary.BigEndian, partType)
-	binary.Write(buf, binary.BigEndian, partLength)
-	buf.WriteString(pluginInstance)
+}
 
-	packet, err := Parse(buf)
-	if err != nil {
-		log.Fatalf("err encountered %v", err)
-	}
-	assert.Equal(t, packet.PluginInstance.Value, pluginInstance, "the plugin instance does not match the expected")
+func Test_ParsesTheType(t *testing.T) {
+
+	assertOnStringPart(t)("the part type", 0x0004, func(packet Packet) string {
+		return packet.Type.Value
+	})
 
 }
