@@ -47,7 +47,7 @@ func Test_ParsesTheTime(t *testing.T) {
 
 }
 
-func Test_ParseTheHighDefintiionTIme(t *testing.T) {
+func Test_ParseTheHighDefintiionTime(t *testing.T) {
 
 	buf := new(bytes.Buffer)
 	time := time.Now().Unix() << 30
@@ -62,6 +62,25 @@ func Test_ParseTheHighDefintiionTIme(t *testing.T) {
 	if err != nil {
 		log.Fatalf("err encountered %v", err)
 	}
-	assert.Equal(t, packet.TimeHigh.Value, time>>30, "the time does not match the expected")
+	assert.Equal(t, packet.TimeHigh.Value, time>>30, "the high def time does not match the expected")
+
+}
+
+func Test_ParsesThePlugin(t *testing.T) {
+
+	buf := new(bytes.Buffer)
+	plugin := "zeePlugin"
+	partType := uint16(0x0002)
+	partLength := uint16(len(plugin))
+
+	binary.Write(buf, binary.BigEndian, partType)
+	binary.Write(buf, binary.BigEndian, partLength)
+	buf.WriteString(plugin)
+
+	packet, err := Parse(buf)
+	if err != nil {
+		log.Fatalf("err encountered %v", err)
+	}
+	assert.Equal(t, packet.Plugin.Value, plugin, "the plugin does not match the expected")
 
 }
