@@ -9,12 +9,13 @@ import (
 	"time"
 )
 
-type PacketStringSelector func(packet Packet) string
-type StringAssert func(value string, typeId uint16, selector PacketStringSelector)
+type PacketPartAssertion func(packet Packet) bool
+type StringPartAssert func(value string, typeId uint16, selector PacketPartAssertion)
+type NumericPartAssert func(value int64, typeId uint16, selector PacketPartAssertion)
 
-func assertOnStringPart(t *testing.T) StringAssert {
+func assertOnStringPart(t *testing.T) StringPartAssert {
 
-	return func(value string, typeId uint16, selector PacketStringSelector) {
+	return func(value string, typeId uint16, selector PacketPartAssertion) {
 
 		buf := new(bytes.Buffer)
 		stringValue := value
@@ -29,77 +30,86 @@ func assertOnStringPart(t *testing.T) StringAssert {
 		if err != nil {
 			log.Fatalf("err encountered %v", err)
 		}
-		assert.Equal(t, selector(packet), stringValue, "the string part value does not match the expected")
+		if !selector(packet) {
+			assert.Fail(t, "the string part value does not match the expected")
+		}
+	}
+
+}
+
+func assertOnNumericPart(t *testing.T) NumericPartAssert {
+
+	return func(value int64, typeId uint16, selector PacketPartAssertion) {
+
+		buf := new(bytes.Buffer)
+		partType := typeId
+		partLength := uint16(12)
+
+		binary.Write(buf, binary.BigEndian, partType)
+		binary.Write(buf, binary.BigEndian, partLength)
+		binary.Write(buf, binary.BigEndian, int64(value))
+
+		packet, err := Parse(buf)
+		if err != nil {
+			log.Fatalf("err encountered %v", err)
+		}
+		if !selector(packet) {
+			assert.Fail(t, "the numeric part value does not match the expected")
+		}
 	}
 
 }
 
 func Test_ParsesTheHostname(t *testing.T) {
-
-	assertOnStringPart(t)("the hostname", 0x0000, func(packet Packet) string {
-		return packet.Host.Value
+	expected := "the hostname"
+	assertOnStringPart(t)(expected, 0x0000, func(packet Packet) bool {
+		actual := packet.Host.Value
+		return actual == expected
 	})
 
 }
 
 func Test_ParsesTheTime(t *testing.T) {
-
-	buf := new(bytes.Buffer)
-	time := time.Now().Unix()
-	partType := uint16(0x0001)
-	partLength := uint16(12)
-
-	binary.Write(buf, binary.BigEndian, partType)
-	binary.Write(buf, binary.BigEndian, partLength)
-	binary.Write(buf, binary.BigEndian, int64(time))
-
-	packet, err := Parse(buf)
-	if err != nil {
-		log.Fatalf("err encountered %v", err)
-	}
-	assert.Equal(t, packet.Time.Value, time, "the time does not match the expected")
+	expected := time.Now().Unix()
+	assertOnNumericPart(t)(expected, 0x0001, func(packet Packet) bool {
+		actual := packet.Time.Value
+		return actual == expected
+	})
 
 }
 
 func Test_ParseTheHighDefintiionTime(t *testing.T) {
-
-	buf := new(bytes.Buffer)
-	time := time.Now().Unix() << 30
-	partType := uint16(0x0008)
-	partLength := uint16(12)
-
-	binary.Write(buf, binary.BigEndian, partType)
-	binary.Write(buf, binary.BigEndian, partLength)
-	binary.Write(buf, binary.BigEndian, int64(time))
-
-	packet, err := Parse(buf)
-	if err != nil {
-		log.Fatalf("err encountered %v", err)
-	}
-	assert.Equal(t, packet.TimeHigh.Value, time>>30, "the high def time does not match the expected")
+	expected := time.Now().Unix() << 30
+	assertOnNumericPart(t)(expected, 0x0008, func(packet Packet) bool {
+		actual := packet.TimeHigh.Value
+		return actual == (expected >> 30)
+	})
 
 }
 
 func Test_ParsesThePlugin(t *testing.T) {
-
-	assertOnStringPart(t)("the plugin", 0x0002, func(packet Packet) string {
-		return packet.Plugin.Value
+	expected := "the plugin"
+	assertOnStringPart(t)(expected, 0x0002, func(packet Packet) bool {
+		actual := packet.Plugin.Value
+		return actual == expected
 	})
 
 }
 
 func Test_ParsesThePluginInstance(t *testing.T) {
-
-	assertOnStringPart(t)("the plugin instance", 0x0003, func(packet Packet) string {
-		return packet.PluginInstance.Value
+	expected := "the plugin instance"
+	assertOnStringPart(t)(expected, 0x0003, func(packet Packet) bool {
+		actual := packet.PluginInstance.Value
+		return actual == expected
 	})
 
 }
 
 func Test_ParsesTheType(t *testing.T) {
-
-	assertOnStringPart(t)("the part type", 0x0004, func(packet Packet) string {
-		return packet.Type.Value
+	expected := "the part type"
+	assertOnStringPart(t)(expected, 0x0004, func(packet Packet) bool {
+		actual := packet.Type.Value
+		return actual == expected
 	})
 
 }
