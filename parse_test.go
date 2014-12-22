@@ -123,5 +123,13 @@ func Test_ParsesTheTypeInstance(t *testing.T) {
 }
 
 func Test_ParsesTheValues(t *testing.T) {
-	t.Skip()
+	t.Skipf("Skipping for now as there is no function to support the ValuesPart")
+}
+
+func Test_ParsesTheInterval(t *testing.T) {
+	expected := int64(1)
+	assertOnNumericPart(t)(expected, 0x0007, func(packet Packet) bool {
+		actual := packet.Interval.Value
+		return actual == expected
+	})
 }
