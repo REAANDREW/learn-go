@@ -59,7 +59,6 @@ func partHeaderFromBuffer(partType uint16, payload *bytes.Buffer) PartHeader {
 func parseHostname() (parser parser, typeCode uint16) {
 	code := uint16(0x0000)
 	return func(packet *Packet, payload *bytes.Buffer) (err error) {
-		fmt.Printf("parsing the hostname\n")
 		payloadString := payload.String()
 		stringPart := StringPart{partHeaderFromBuffer(code, payload), payloadString}
 		packet.Host = stringPart

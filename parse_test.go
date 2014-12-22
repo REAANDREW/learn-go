@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
+	"time"
 )
 
 func Test_ParsesTheHostname(t *testing.T) {
@@ -24,4 +25,24 @@ func Test_ParsesTheHostname(t *testing.T) {
 		log.Fatalf("err encountered %v", err)
 	}
 	assert.Equal(t, packet.Host.Value, hostname, "the hostname does not match the expected")
+
+}
+
+func Test_ParsesTheTime(t *testing.T) {
+
+	buf := new(bytes.Buffer)
+	time := time.Now().Unix()
+	partType := uint16(1)
+	partLength := uint16(12)
+
+	binary.Write(buf, binary.BigEndian, partType)
+	binary.Write(buf, binary.BigEndian, partLength)
+	binary.Write(buf, binary.BigEndian, int64(time))
+
+	packet, err := Parse(buf)
+	if err != nil {
+		log.Fatalf("err encountered %v", err)
+	}
+	assert.Equal(t, packet.Time.Value, time, "the time does not match the expected")
+
 }
