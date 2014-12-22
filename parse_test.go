@@ -10,10 +10,10 @@ import (
 )
 
 type PacketPartAssertion func(packet Packet) bool
-type PartAssert func(value string, typeId uint16, selector PacketPartAssertion)
-type PartAssert func(value int64, typeId uint16, selector PacketPartAssertion)
+type StringPartAssert func(value string, typeId uint16, selector PacketPartAssertion)
+type NumericPartAssert func(value int64, typeId uint16, selector PacketPartAssertion)
 
-func assertOnStringPart(t *testing.T) PartAssert {
+func assertOnStringPart(t *testing.T) StringPartAssert {
 
 	return func(value string, typeId uint16, selector PacketPartAssertion) {
 
@@ -37,7 +37,7 @@ func assertOnStringPart(t *testing.T) PartAssert {
 
 }
 
-func assertOnNumericPart(t *testing.T) PartAssert {
+func assertOnNumericPart(t *testing.T) NumericPartAssert {
 
 	return func(value int64, typeId uint16, selector PacketPartAssertion) {
 
