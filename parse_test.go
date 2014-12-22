@@ -113,3 +113,11 @@ func Test_ParsesTheType(t *testing.T) {
 	})
 
 }
+
+func Test_ParsesTheTypeInstance(t *testing.T) {
+	expected := "the part type instance"
+	assertOnStringPart(t)(expected, 0x0005, func(packet Packet) bool {
+		actual := packet.TypeInstance.Value
+		return actual == expected
+	})
+}
