@@ -33,7 +33,10 @@ func main() {
 		buffer := bytes.NewBuffer(packetBytes)
 
 		go func(payloadBuffer *bytes.Buffer) {
-			packet := Parse(payloadBuffer)
+			packet, err := Parse(payloadBuffer)
+			if err != nil {
+				log.Fatalf("err encountered %v", err)
+			}
 			fmt.Printf("Got a packet %v\n", packet)
 		}(buffer)
 	}

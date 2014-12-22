@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 )
 
 var messageProcessors map[uint16]parser
@@ -16,24 +15,25 @@ func init() {
 	messageProcessors = createMessageProcessors()
 }
 
-func Parse(payloadBuffer *bytes.Buffer) (parsedPacket Packet) {
+func Parse(payloadBuffer *bytes.Buffer) (parsedPacket Packet, err error) {
 	var packet Packet
 
 	for payloadBuffer.Len() > 0 {
 		partHeader := new(PartHeader)
 		binary.Read(payloadBuffer, binary.BigEndian, partHeader)
-		partBuffer := bytes.NewBuffer(payloadBuffer.Next(int(partHeader.PartLength) - 4))
+		payloadBytes := payloadBuffer.Next(int(partHeader.PartLength))
+		partBuffer := bytes.NewBuffer(payloadBytes)
 		processor, supports := messageProcessors[partHeader.PartType]
 		if supports {
 			err := processor(&packet, partBuffer)
 			if err != nil {
-				log.Fatal(err)
+				return Packet{}, err
 			}
 		} else {
 			fmt.Printf("%5.d", partHeader.PartType)
 		}
 	}
-	return packet
+	return packet, nil
 }
 
 func createMessageProcessors() (processors map[uint16]parser) {
@@ -59,7 +59,9 @@ func partHeaderFromBuffer(partType uint16, payload *bytes.Buffer) PartHeader {
 func parseHostname() (parser parser, typeCode uint16) {
 	code := uint16(0x0000)
 	return func(packet *Packet, payload *bytes.Buffer) (err error) {
-		stringPart := StringPart{partHeaderFromBuffer(code, payload), payload.String()}
+		fmt.Printf("parsing the hostname\n")
+		payloadString := payload.String()
+		stringPart := StringPart{partHeaderFromBuffer(code, payload), payloadString}
 		packet.Host = stringPart
 		return nil
 	}, code
