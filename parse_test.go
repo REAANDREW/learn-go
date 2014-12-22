@@ -78,7 +78,7 @@ func Test_ParsesTheTime(t *testing.T) {
 
 }
 
-func Test_ParseTheHighDefintiionTime(t *testing.T) {
+func Test_ParseTheHighDefintionTime(t *testing.T) {
 	expected := time.Now().Unix() << 30
 	assertOnNumericPart(t)(expected, 0x0008, func(packet Packet) bool {
 		actual := packet.TimeHigh.Value
@@ -131,5 +131,13 @@ func Test_ParsesTheInterval(t *testing.T) {
 	assertOnNumericPart(t)(expected, 0x0007, func(packet Packet) bool {
 		actual := packet.Interval.Value
 		return actual == expected
+	})
+}
+
+func Test_ParsesTheHighDefinitionInterval(t *testing.T) {
+	expected := int64(1) << 30
+	assertOnNumericPart(t)(expected, 0x0009, func(packet Packet) bool {
+		actual := packet.IntervalHigh.Value
+		return actual == (expected >> 30)
 	})
 }
