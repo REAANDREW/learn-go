@@ -121,3 +121,7 @@ func Test_ParsesTheTypeInstance(t *testing.T) {
 		return actual == expected
 	})
 }
+
+func Test_ParsesTheValues(t *testing.T) {
+	t.Skip()
+}
