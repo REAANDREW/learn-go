@@ -84,3 +84,22 @@ func Test_ParsesThePlugin(t *testing.T) {
 	assert.Equal(t, packet.Plugin.Value, plugin, "the plugin does not match the expected")
 
 }
+
+func Test_ParsesThePluginInstance(t *testing.T) {
+
+	buf := new(bytes.Buffer)
+	pluginInstance := "zeePluginInstance"
+	partType := uint16(0x0003)
+	partLength := uint16(len(pluginInstance))
+
+	binary.Write(buf, binary.BigEndian, partType)
+	binary.Write(buf, binary.BigEndian, partLength)
+	buf.WriteString(pluginInstance)
+
+	packet, err := Parse(buf)
+	if err != nil {
+		log.Fatalf("err encountered %v", err)
+	}
+	assert.Equal(t, packet.PluginInstance.Value, pluginInstance, "the plugin instance does not match the expected")
+
+}
