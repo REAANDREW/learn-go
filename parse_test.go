@@ -149,3 +149,11 @@ func Test_ParsesTheMessage(t *testing.T) {
 		return actual == expected
 	})
 }
+
+func Test_ParsesTheSeverity(t *testing.T) {
+	expected := int64(1)
+	assertOnNumericPart(t)(expected, 0x0101, func(packet Packet) bool {
+		actual := packet.Severity.Value
+		return actual == expected
+	})
+}
