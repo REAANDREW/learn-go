@@ -141,3 +141,11 @@ func Test_ParsesTheHighDefinitionInterval(t *testing.T) {
 		return actual == (expected >> 30)
 	})
 }
+
+func Test_ParsesTheMessage(t *testing.T) {
+	expected := "the message"
+	assertOnStringPart(t)(expected, 0x0100, func(packet Packet) bool {
+		actual := packet.Message.Value
+		return actual == expected
+	})
+}

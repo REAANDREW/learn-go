@@ -39,7 +39,7 @@ func Parse(payloadBuffer *bytes.Buffer) (parsedPacket Packet, err error) {
 
 func createMessageProcessors() (processors map[uint16]parser) {
 	messageProcessors := make(map[uint16]parser)
-	val := []parserGenerator{parseHostname, parseTime, parseHighTime, parsePlugin, parsePluginInstance, parseProcessType, parseProcessTypeInstance, parseInterval, parseValues, parseHighInterval}
+	val := []parserGenerator{parseHostname, parseTime, parseHighTime, parsePlugin, parsePluginInstance, parseProcessType, parseProcessTypeInstance, parseInterval, parseValues, parseHighInterval, parseMessage}
 
 	for _, parserGenFunc := range val {
 		parserFunc, typeCode := parserGenFunc()
@@ -220,5 +220,14 @@ func parseHighInterval() (parser parser, typeCode uint16) {
 			packet.IntervalHigh = numericPart
 			return nil
 		}
+	}, code
+}
+
+func parseMessage() (parser parser, typeCode uint16) {
+	code := uint16(0x0100)
+	return func(packet *Packet, payload *bytes.Buffer) (err error) {
+		stringPart := StringPart{partHeaderFromBuffer(code, payload), payload.String()}
+		packet.Message = stringPart
+		return nil
 	}, code
 }
