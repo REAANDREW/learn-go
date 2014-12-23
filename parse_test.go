@@ -151,6 +151,28 @@ func Test_ParsesTheValues(t *testing.T) {
 	assert.Equal(t, secondValue.CounterValue, uint32(5), "CounterValue mismatch on the ValuePart")
 }
 
+func Test_ParsesGuageValue(t *testing.T) {
+	buf := new(bytes.Buffer)
+	partType := uint16(0x0006)
+	partLength := uint16(15)
+	numberOfValues := uint16(1)
+	binary.Write(buf, binary.BigEndian, partType)
+	binary.Write(buf, binary.BigEndian, partLength)
+	binary.Write(buf, binary.BigEndian, numberOfValues)
+	binary.Write(buf, binary.BigEndian, byte(1))
+	binary.Write(buf, binary.LittleEndian, float64(5))
+
+	packet, err := Parse(buf)
+	if err != nil {
+		log.Fatalf("error encountered %v", err)
+	}
+
+	firstValue := packet.Values.Values[0]
+
+	assert.Equal(t, firstValue.DataType, 1, "Data Type Mismatch on the Guage Value Part")
+	assert.Equal(t, firstValue.GaugeValue, float64(5), "Value mismatch on the Guage Value Part")
+}
+
 func Test_ParsesTheInterval(t *testing.T) {
 	expected := int64(1)
 	assertOnNumericPart(t)(expected, 0x0007, func(packet Packet) bool {
