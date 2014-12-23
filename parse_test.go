@@ -123,7 +123,32 @@ func Test_ParsesTheTypeInstance(t *testing.T) {
 }
 
 func Test_ParsesTheValues(t *testing.T) {
-	t.Skipf("Skipping for now as there is no function to support the ValuesPart")
+	buf := new(bytes.Buffer)
+	partType := uint16(0x0006)
+	partLength := uint16(16)
+	numberOfValues := uint16(2)
+	counter := uint16(0)
+	binary.Write(buf, binary.BigEndian, partType)
+	binary.Write(buf, binary.BigEndian, partLength)
+	binary.Write(buf, binary.BigEndian, numberOfValues)
+	for counter < numberOfValues {
+		counter = counter + 1
+		binary.Write(buf, binary.BigEndian, byte(0))
+		binary.Write(buf, binary.BigEndian, uint32(5))
+	}
+
+	packet, err := Parse(buf)
+	if err != nil {
+		log.Fatalf("error encountered %v", err)
+	}
+	assert.Equal(t, len(packet.Values.Values), 2, "incorrect number of values")
+
+	firstValue := packet.Values.Values[0]
+	assert.Equal(t, firstValue.DataType, 0, "Data Type mismatch on the ValuePart")
+	assert.Equal(t, firstValue.CounterValue, uint32(5), "CounterValue mismatch on the ValuePart")
+	secondValue := packet.Values.Values[1]
+	assert.Equal(t, secondValue.DataType, 0, "Data Type mismatch on the ValuePart")
+	assert.Equal(t, secondValue.CounterValue, uint32(5), "CounterValue mismatch on the ValuePart")
 }
 
 func Test_ParsesTheInterval(t *testing.T) {
