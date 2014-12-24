@@ -195,6 +195,28 @@ func Test_ParsesDeriveValue(t *testing.T) {
 	assert.Equal(t, firstValue.DeriveValue, int32(5), "Value mismatch on the Derive Value Part")
 }
 
+func Test_ParsesAbsoluteValue(t *testing.T) {
+	buf := new(bytes.Buffer)
+	partType := uint16(0x0006)
+	partLength := uint16(11)
+	numberOfValues := uint16(1)
+	binary.Write(buf, binary.BigEndian, partType)
+	binary.Write(buf, binary.BigEndian, partLength)
+	binary.Write(buf, binary.BigEndian, numberOfValues)
+	binary.Write(buf, binary.BigEndian, byte(3))
+	binary.Write(buf, binary.BigEndian, int32(5))
+
+	packet, err := Parse(buf)
+	if err != nil {
+		log.Fatalf("error encountered %v", err)
+	}
+
+	firstValue := packet.Values.Values[0]
+
+	assert.Equal(t, firstValue.DataType, 3, "Data Type Mismatch on the Absolute Value Part")
+	assert.Equal(t, firstValue.AbsoluteValue, int32(5), "Value mismatch on the Absolute Value Part")
+}
+
 func Test_ParsesTheInterval(t *testing.T) {
 	expected := int64(1)
 	assertOnNumericPart(t)(expected, 0x0007, func(packet Packet) bool {
