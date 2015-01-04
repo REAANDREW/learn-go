@@ -1,5 +1,5 @@
 # Learn-GO
 
-This is a sample project to help me learn-go.  The first part of this project is to write a collectd parser using first class functions.
+Topics to show examples of golang and concepts which go with the language as an aid to learn it
 
 
