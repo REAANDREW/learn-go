@@ -33,7 +33,7 @@ func Test_WithoutBufferingZeeChannel(t *testing.T) {
 	go func() {
 		val := <-channel
 		fmt.Printf("So we got %d\n", val)
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Millisecond * 100)
 		wg.Done()
 	}()
 	channel <- 2
