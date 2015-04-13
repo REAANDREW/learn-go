@@ -74,32 +74,65 @@ func example_6() {
 }
 
 func example_7() {
-	//Selecting the channel and causing a deadlock
+	//Selecting the channel to read in a non-blocking way
 	chan_string := make(chan string)
 	chan_int := make(chan int)
 	go func() {
-		select {
-		case string_value := <-chan_string:
-			fmt.Println(string_value)
-		case int_value := <-chan_int:
-			fmt.Println(fmt.Sprintf("Example %s\\.2", int_value))
+		for {
+			select {
+			case string_value := <-chan_string:
+				fmt.Println(string_value)
+			case int_value := <-chan_int:
+				fmt.Println(fmt.Sprintf("Example %d.2", int_value))
+				break
+			default:
+			}
 		}
 	}()
-	chan_int <- 7
+	time.Sleep(1 * time.Second)
 	chan_string <- "Example 7.1"
+	chan_int <- 7
 }
 
 func example_8() {
+	//Select a channel to write in a non-blocking way
+	chan_string := make(chan string)
+	chan_int := make(chan int)
+	go func() {
+		for {
+			select {
+			case chan_string <- "Example 8.1":
+			case chan_int <- 8:
+			default:
+			}
+		}
+	}()
+	time.Sleep(1 * time.Second)
+	fmt.Println(<-chan_string)
+	fmt.Println(fmt.Sprintf("Example %d.2", <-chan_int))
+}
+
+func example_9() {
 	//range over a channel
+	chan_int := make(chan int, 8)
+	for i := 0; i < 8; i++ {
+		chan_int <- i
+	}
+	close(chan_int)
+	for value := range chan_int {
+		fmt.Println(fmt.Sprintf("Example 9.%d", value+1))
+	}
 }
 
 func channels() {
 	fmt.Println("Running examples...")
-	example_1()
-	example_2()
-	example_3()
-	example_4()
-	example_5()
-	example_6()
-	example_7()
+	//example_1()
+	//example_2()
+	//example_3()
+	//example_4()
+	//example_5()
+	//example_6()
+	//example_7()
+	//example_8()
+	example_9()
 }
